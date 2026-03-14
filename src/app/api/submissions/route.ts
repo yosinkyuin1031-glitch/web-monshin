@@ -84,14 +84,17 @@ export async function PUT(req: NextRequest) {
   if (data && updates.status === 'submitted' && data.patient_name) {
     const clinicId = getClinicId();
 
-    // 全患者を取得してファジーマッチング
+    // 全患者を取得してファジーマッチング（電話番号・生年月日も取得してマッチング精度向上）
     const { data: allPatients } = await supabase
       .from('cm_patients')
-      .select('id, name, furigana')
+      .select('id, name, furigana, phone, birth_date')
       .eq('clinic_id', clinicId);
 
     let patientId: string | null = null;
-    const matched = allPatients ? findBestMatch(data.patient_name, allPatients) : null;
+    const matched = allPatients ? findBestMatch(data.patient_name, allPatients, {
+      phone: data.phone,
+      birth_date: data.birth_date,
+    }) : null;
 
     if (matched) {
       // ファジーマッチで既存患者にリンク

@@ -12,10 +12,12 @@ export function normalizeName(name: string): string {
     .toLowerCase()
 }
 
-interface PatientCandidate {
+export interface PatientCandidate {
   id: string
   name: string
   furigana?: string | null
+  phone?: string | null
+  birth_date?: string | null
 }
 
 // Levenshtein distance
@@ -40,9 +42,60 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n]
 }
 
-// Match priority: exact → normalized → furigana → partial → contains → furigana partial → surname → levenshtein
-export function findBestMatch(query: string, patients: PatientCandidate[]): PatientCandidate | null {
+// Enhanced match: phone/birthdate → name matching
+export function findBestMatch(
+  query: string,
+  patients: PatientCandidate[],
+  options?: { phone?: string | null; birth_date?: string | null }
+): PatientCandidate | null {
   if (!query || patients.length === 0) return null
+
+  // Level 0: Phone number exact match (most reliable identifier)
+  if (options?.phone) {
+    const normalizedPhone = options.phone.replace(/[-\s\u3000()（）]/g, '')
+    if (normalizedPhone.length >= 10) {
+      for (const p of patients) {
+        if (p.phone) {
+          const pPhone = p.phone.replace(/[-\s\u3000()（）]/g, '')
+          if (pPhone === normalizedPhone) return p
+        }
+      }
+    }
+  }
+
+  // Level 0.5: Phone + partial name match (phone last 4 digits + surname match)
+  if (options?.phone) {
+    const normalizedPhone = options.phone.replace(/[-\s\u3000()（）]/g, '')
+    const last4 = normalizedPhone.slice(-4)
+    if (last4.length === 4) {
+      const normalizedQuery = normalizeName(query)
+      for (const p of patients) {
+        if (p.phone) {
+          const pLast4 = p.phone.replace(/[-\s\u3000()（）]/g, '').slice(-4)
+          if (pLast4 === last4) {
+            const nn = normalizeName(p.name)
+            // Surname (first 2+ chars) match with phone confirmation
+            if (normalizedQuery.length >= 2 && nn.length >= 2) {
+              if (nn.substring(0, 2) === normalizedQuery.substring(0, 2)) return p
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Level 0.7: Birth date + name match
+  if (options?.birth_date) {
+    const normalizedQuery = normalizeName(query)
+    for (const p of patients) {
+      if (p.birth_date === options.birth_date) {
+        const nn = normalizeName(p.name)
+        if (nn === normalizedQuery || nn.includes(normalizedQuery) || normalizedQuery.includes(nn)) {
+          return p
+        }
+      }
+    }
+  }
 
   const normalizedQuery = normalizeName(query)
 
@@ -80,18 +133,20 @@ export function findBestMatch(query: string, patients: PatientCandidate[]): Pati
     if (nf.includes(normalizedQuery) || normalizedQuery.includes(nf)) return p
   }
 
-  // Level 7: Surname match (first character(s) of name)
-  // Extract surname: for Japanese names, try first 1-3 chars
-  for (const p of patients) {
-    const nn = normalizeName(p.name)
-    // If query matches the surname portion (at least 2 chars)
-    if (normalizedQuery.length >= 2 && nn.length >= 2) {
-      // Check if first 2+ chars match
-      const minLen = Math.min(normalizedQuery.length, nn.length)
-      for (let len = minLen; len >= 2; len--) {
-        if (normalizedQuery.substring(0, len) === nn.substring(0, len)) return p
+  // Level 7: Surname match (Japanese full surname must match)
+  // Only match when query is a complete surname (2-4 chars, no first name)
+  if (normalizedQuery.length >= 2 && normalizedQuery.length <= 4) {
+    const candidates: PatientCandidate[] = []
+    for (const p of patients) {
+      // Extract surname: split by common delimiters or take first 2-4 chars if no delimiter
+      const parts = p.name.replace(/[\s\u3000]+/g, ' ').split(' ')
+      const surname = parts.length > 1 ? normalizeName(parts[0]) : ''
+      if (surname && surname === normalizedQuery) {
+        candidates.push(p)
       }
     }
+    // Only return if exactly one match (avoid ambiguity)
+    if (candidates.length === 1) return candidates[0]
   }
 
   // Level 8: Levenshtein distance (threshold: 30% of query length, min 1, max 3)
