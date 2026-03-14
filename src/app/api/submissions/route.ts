@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { generateSummary } from '@/lib/types';
 import { getClinicId } from '@/lib/clinic';
+import { findBestMatch } from '@/lib/nameMatch';
 import crypto from 'crypto';
 
 // GET: list all submissions (for staff dashboard)
@@ -83,18 +84,18 @@ export async function PUT(req: NextRequest) {
   if (data && updates.status === 'submitted' && data.patient_name) {
     const clinicId = getClinicId();
 
-    // 既存患者を名前で検索
-    const { data: existingPatients } = await supabase
+    // 全患者を取得してファジーマッチング
+    const { data: allPatients } = await supabase
       .from('cm_patients')
-      .select('id, name')
-      .eq('clinic_id', clinicId)
-      .ilike('name', data.patient_name);
+      .select('id, name, furigana')
+      .eq('clinic_id', clinicId);
 
     let patientId: string | null = null;
+    const matched = allPatients ? findBestMatch(data.patient_name, allPatients) : null;
 
-    if (existingPatients && existingPatients.length > 0) {
-      // 既存患者にリンク
-      patientId = existingPatients[0].id;
+    if (matched) {
+      // ファジーマッチで既存患者にリンク
+      patientId = matched.id;
     } else {
       // 新規患者を自動作成
       const { data: newPatient } = await supabase
