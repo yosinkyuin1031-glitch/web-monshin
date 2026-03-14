@@ -1,0 +1,20 @@
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+import crypto from 'crypto';
+
+// POST: generate a new QR code link (creates a draft submission)
+export async function POST() {
+  const token = crypto.randomBytes(16).toString('hex');
+
+  const { data, error } = await supabase
+    .from('ms_submissions')
+    .insert({ token, status: 'draft' })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ token: data.token, id: data.id });
+}
