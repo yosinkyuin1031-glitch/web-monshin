@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getClinicId } from '@/lib/clinic';
 import crypto from 'crypto';
 
 // POST: generate a new QR code link (creates a draft submission)
@@ -8,7 +9,7 @@ export async function POST() {
 
   const { data, error } = await supabase
     .from('ms_submissions')
-    .insert({ token, status: 'draft' })
+    .insert({ token, status: 'draft', clinic_id: getClinicId() })
     .select()
     .single();
 

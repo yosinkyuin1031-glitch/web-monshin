@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { generateSummary } from '@/lib/types';
+import { getClinicId } from '@/lib/clinic';
 import crypto from 'crypto';
 
 // GET: list all submissions (for staff dashboard)
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status');
+  const clinicId = getClinicId();
 
   let query = supabase
     .from('ms_submissions')
     .select('*')
+    .eq('clinic_id', clinicId)
     .order('created_at', { ascending: false });
 
   if (status) {
@@ -31,7 +34,7 @@ export async function POST() {
 
   const { data, error } = await supabase
     .from('ms_submissions')
-    .insert({ token, status: 'draft' })
+    .insert({ token, status: 'draft', clinic_id: getClinicId() })
     .select()
     .single();
 
@@ -74,6 +77,63 @@ export async function PUT(req: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // 提出時にcm_patientsと自動リンク
+  if (data && updates.status === 'submitted' && data.patient_name) {
+    const clinicId = getClinicId();
+
+    // 既存患者を名前で検索
+    const { data: existingPatients } = await supabase
+      .from('cm_patients')
+      .select('id, name')
+      .eq('clinic_id', clinicId)
+      .ilike('name', data.patient_name);
+
+    let patientId: string | null = null;
+
+    if (existingPatients && existingPatients.length > 0) {
+      // 既存患者にリンク
+      patientId = existingPatients[0].id;
+    } else {
+      // 新規患者を自動作成
+      const { data: newPatient } = await supabase
+        .from('cm_patients')
+        .insert({
+          clinic_id: clinicId,
+          name: data.patient_name || '',
+          furigana: data.patient_furigana || '',
+          birth_date: data.birth_date || null,
+          gender: data.gender || '男性',
+          phone: data.phone || '',
+          email: data.email || '',
+          address: [data.prefecture, data.city, data.address, data.building].filter(Boolean).join(''),
+          zipcode: data.zipcode || '',
+          prefecture: data.prefecture || '',
+          city: data.city || '',
+          building: data.building || '',
+          chief_complaint: (data.chief_complaints || []).join(', '),
+          medical_history: data.medical_history || '',
+          occupation: data.occupation || '',
+          referral_source: data.referral_source || '',
+          notes: '',
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (newPatient) {
+        patientId = newPatient.id;
+      }
+    }
+
+    // ms_submissionsにpatient_idをリンク
+    if (patientId) {
+      await supabase
+        .from('ms_submissions')
+        .update({ patient_id: patientId })
+        .eq('id', data.id);
+    }
   }
 
   return NextResponse.json(data);
