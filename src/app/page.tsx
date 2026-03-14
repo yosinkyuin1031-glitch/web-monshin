@@ -26,8 +26,14 @@ export default function Home() {
           >
             管理画面へ
           </button>
+          <button
+            onClick={() => router.push('/start')}
+            className="w-full py-4 rounded-xl font-medium text-base border-2 border-[#14252A] text-[#14252A] hover:bg-gray-100"
+          >
+            問診票を記入する（患者様）
+          </button>
           <p className="text-xs text-gray-400">
-            患者様は、受付で発行されたQRコードまたはリンクから問診票にアクセスしてください。
+            LINEリッチメニューには /start のURLを設定してください。
           </p>
         </div>
       </div>

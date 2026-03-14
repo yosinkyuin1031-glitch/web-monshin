@@ -135,6 +135,21 @@ export async function PUT(req: NextRequest) {
         .update({ patient_id: patientId })
         .eq('id', data.id);
     }
+
+    // LINE通知（スタッフへ）
+    try {
+      const baseUrl = req.nextUrl.origin;
+      await fetch(`${baseUrl}/api/line-notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_name: data.patient_name,
+          chief_complaints: data.chief_complaints,
+        }),
+      });
+    } catch {
+      // LINE通知失敗は問診提出をブロックしない
+    }
   }
 
   return NextResponse.json(data);
