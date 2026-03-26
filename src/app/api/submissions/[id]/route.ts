@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // GET: get a submission by id or token
+// NOTE: tokenでのアクセスは患者向け（認証不要）のため、認証なしのsupabaseクライアントを使用
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getClinicId } from '@/lib/clinic';
+import { createClient } from '@/lib/supabase/server';
+import { getClinicIdServer } from '@/lib/clinic-server';
 import { Submission } from '@/lib/types';
 
 /**
@@ -8,7 +8,8 @@ import { Submission } from '@/lib/types';
  * 全問診データをCSV形式でダウンロード
  */
 export async function GET() {
-  const clinicId = getClinicId();
+  const clinicId = await getClinicIdServer();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('ms_submissions')

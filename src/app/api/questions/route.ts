@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getClinicId } from '@/lib/clinic';
+import { createClient } from '@/lib/supabase/server';
+import { getClinicIdServer } from '@/lib/clinic-server';
 import {
   COMPLAINT_OPTIONS,
   EXERCISE_OPTIONS,
@@ -20,7 +20,8 @@ const DEFAULT_OPTIONS: Record<string, string[]> = {
 
 // GET: get custom question options for the clinic
 export async function GET() {
-  const clinicId = getClinicId();
+  const clinicId = await getClinicIdServer();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('ms_question_options')
@@ -49,7 +50,8 @@ export async function GET() {
 
 // PUT: update custom question options
 export async function PUT(req: NextRequest) {
-  const clinicId = getClinicId();
+  const clinicId = await getClinicIdServer();
+  const supabase = await createClient();
   const body = await req.json();
 
   const updates = {

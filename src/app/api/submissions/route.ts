@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { generateSummary } from '@/lib/types';
-import { getClinicId } from '@/lib/clinic';
-import { findBestMatch } from '@/lib/nameMatch';
+import { getClinicIdServer } from '@/lib/clinic-server';
+import { findOrCreatePatient } from '@/lib/shared-patient';
 import crypto from 'crypto';
 
 // GET: list all submissions (for staff dashboard)
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status');
-  const clinicId = getClinicId();
+  const clinicId = await getClinicIdServer();
+  const supabaseServer = await createClient();
 
-  let query = supabase
+  let query = supabaseServer
     .from('ms_submissions')
     .select('*')
     .eq('clinic_id', clinicId)
@@ -32,10 +34,12 @@ export async function GET(req: NextRequest) {
 // POST: create a new submission (generates token)
 export async function POST() {
   const token = crypto.randomBytes(16).toString('hex');
+  const clinicId = await getClinicIdServer();
+  const supabaseServer = await createClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseServer
     .from('ms_submissions')
-    .insert({ token, status: 'draft', clinic_id: getClinicId() })
+    .insert({ token, status: 'draft', clinic_id: clinicId })
     .select()
     .single();
 
@@ -47,6 +51,7 @@ export async function POST() {
 }
 
 // PUT: update a submission by token
+// NOTE: 患者が問診を入力する際はtokenベースで更新（認証不要）
 export async function PUT(req: NextRequest) {
   const body = await req.json();
   const { token, ...updates } = body;
@@ -82,7 +87,8 @@ export async function PUT(req: NextRequest) {
 
   // 提出時にcm_patientsと自動リンク
   if (data && updates.status === 'submitted' && data.patient_name) {
-    const clinicId = getClinicId();
+    // tokenから取得したsubmissionのclinic_idを使用（患者は未認証のため）
+    const clinicId = data.clinic_id;
 
     // 全患者を取得してファジーマッチング（電話番号・生年月日も取得してマッチング精度向上）
     const { data: allPatients } = await supabase
