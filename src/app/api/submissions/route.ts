@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseServer
     .from('ms_submissions')
-    .select('*')
+    .select('*, patient:cm_patients(patient_number)')
     .eq('clinic_id', clinicId)
     .order('created_at', { ascending: false });
 

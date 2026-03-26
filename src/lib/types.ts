@@ -29,6 +29,10 @@ export interface Submission {
   visit_motivation: string | null;
   summary_text: string | null;
   notes: string | null;
+  patient_id?: string | null;
+  patient_match_type?: string | null;
+  patient_is_new?: boolean | null;
+  patient?: { patient_number: number | null } | null;
   created_at: string;
   updated_at: string;
 }

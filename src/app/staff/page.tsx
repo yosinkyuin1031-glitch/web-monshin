@@ -228,6 +228,9 @@ export default function StaffDashboard() {
                       状態
                     </th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">
+                      患者番号
+                    </th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">
                       患者名
                     </th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">
@@ -248,6 +251,11 @@ export default function StaffDashboard() {
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="px-4 py-3">{statusBadge(sub.status)}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-gray-400">
+                        {sub.patient?.patient_number
+                          ? `P${String(sub.patient.patient_number).padStart(4, '0')}`
+                          : '—'}
+                      </td>
                       <td className="px-4 py-3 font-medium">
                         {sub.patient_name || '（未入力）'}
                       </td>

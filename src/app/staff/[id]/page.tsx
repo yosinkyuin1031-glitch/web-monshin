@@ -155,6 +155,9 @@ export default function SubmissionDetail() {
         </div>
 
         <Section title="基本情報">
+          {sub.patient?.patient_number && (
+            <Field label="患者番号" value={`P${String(sub.patient.patient_number).padStart(4, '0')}`} />
+          )}
           <Field label="氏名" value={sub.patient_name} />
           <Field label="フリガナ" value={sub.patient_furigana} />
           <Field label="生年月日" value={sub.birth_date} />

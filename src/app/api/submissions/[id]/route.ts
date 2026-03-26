@@ -10,7 +10,7 @@ export async function GET(
   const { id } = params;
 
   // Try by id first, then by token
-  let query = supabase.from('ms_submissions').select('*');
+  let query = supabase.from('ms_submissions').select('*, patient:cm_patients(patient_number)');
 
   // UUID format check
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
