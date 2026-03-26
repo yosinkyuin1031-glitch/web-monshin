@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Submission } from '@/lib/types';
+import { useAuth } from '@/lib/useAuth';
+import LoginForm from '@/components/LoginForm';
 
 export default function StaffDashboard() {
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -12,6 +15,7 @@ export default function StaffDashboard() {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     const fetchSubmissions = async () => {
       setLoading(true);
       const url = filter === 'all' ? '/api/submissions' : `/api/submissions?status=${filter}`;
@@ -21,7 +25,7 @@ export default function StaffDashboard() {
       setLoading(false);
     };
     fetchSubmissions();
-  }, [filter]);
+  }, [filter, user]);
 
   const generateQR = async () => {
     setGenerating(true);
@@ -35,6 +39,10 @@ export default function StaffDashboard() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleCsvExport = () => {
+    window.open('/api/export/csv', '_blank');
   };
 
   const statusBadge = (status: string) => {
@@ -72,19 +80,56 @@ export default function StaffDashboard() {
     });
   };
 
+  // Show spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{ borderColor: '#14252A' }}
+        />
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm onLogin={signIn} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="text-white py-4 px-6" style={{ backgroundColor: '#14252A' }}>
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="text-lg font-bold">WEB問診 管理画面</h1>
-          <button
-            onClick={generateQR}
-            disabled={generating}
-            className="px-4 py-2 bg-white rounded-lg text-sm font-medium disabled:opacity-50"
-            style={{ color: '#14252A' }}
-          >
-            {generating ? '生成中...' : 'QRコード生成'}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/staff/settings"
+              className="px-4 py-2 bg-white/20 border border-white/40 rounded-lg text-sm font-medium text-white hover:bg-white/30"
+            >
+              設問カスタマイズ
+            </Link>
+            <button
+              onClick={handleCsvExport}
+              className="px-4 py-2 bg-white/20 border border-white/40 rounded-lg text-sm font-medium text-white hover:bg-white/30"
+            >
+              CSV出力
+            </button>
+            <button
+              onClick={generateQR}
+              disabled={generating}
+              className="px-4 py-2 bg-white rounded-lg text-sm font-medium disabled:opacity-50"
+              style={{ color: '#14252A' }}
+            >
+              {generating ? '生成中...' : 'QRコード生成'}
+            </button>
+            <button
+              onClick={signOut}
+              className="px-4 py-2 bg-white/20 border border-white/40 rounded-lg text-sm font-medium text-white hover:bg-white/30"
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       </header>
 

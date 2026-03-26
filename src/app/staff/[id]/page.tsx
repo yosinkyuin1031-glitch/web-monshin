@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Submission } from '@/lib/types';
+import { useAuth } from '@/lib/useAuth';
+import LoginForm from '@/components/LoginForm';
 
 export default function SubmissionDetail() {
+  const { user, loading: authLoading, signIn } = useAuth();
   const params = useParams();
   const id = params.id as string;
 
@@ -14,6 +17,7 @@ export default function SubmissionDetail() {
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
+    if (!user) return;
     fetch(`/api/submissions/${id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -21,7 +25,7 @@ export default function SubmissionDetail() {
         setNotes(data.notes || '');
         setLoading(false);
       });
-  }, [id]);
+  }, [id, user]);
 
   const markReviewed = async () => {
     const res = await fetch(`/api/submissions/${id}`, {
@@ -49,6 +53,24 @@ export default function SubmissionDetail() {
       alert('カルテ用テキストをコピーしました');
     }
   };
+
+  const handlePdfExport = () => {
+    window.open(`/api/export/pdf?id=${id}`, '_blank');
+  };
+
+  // Show spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderColor: '#14252A' }} />
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm onLogin={signIn} />;
+  }
 
   if (loading) {
     return (
@@ -123,6 +145,13 @@ export default function SubmissionDetail() {
               カルテ用テキストをコピー
             </button>
           )}
+          <button
+            onClick={handlePdfExport}
+            className="px-5 py-2 border rounded-lg text-sm font-medium"
+            style={{ borderColor: '#14252A', color: '#14252A' }}
+          >
+            PDF出力
+          </button>
         </div>
 
         <Section title="基本情報">

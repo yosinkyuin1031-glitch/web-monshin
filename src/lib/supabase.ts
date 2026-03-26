@@ -4,3 +4,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzkfkazjylr
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_H1Ch2D2XIuSQMzNL-ns8zg_gAqrx7wL';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Browser-side client for auth (same instance, but exported with clear name)
+export const supabaseBrowser = createClient(supabaseUrl, supabaseAnonKey);

@@ -23,6 +23,14 @@ const STEP_LABELS = [
   '確認',
 ];
 
+interface QuestionOptions {
+  complaint_options: string[];
+  exercise_options: string[];
+  sleep_options: string[];
+  stress_options: string[];
+  referral_options: string[];
+}
+
 export default function MonshinPage() {
   const params = useParams();
   const token = params.token as string;
@@ -35,6 +43,35 @@ export default function MonshinPage() {
     chief_complaints: [],
     pain_severity: 5,
   });
+
+  // Dynamic question options (fetched from API, falls back to hardcoded defaults)
+  const [questionOptions, setQuestionOptions] = useState<QuestionOptions>({
+    complaint_options: COMPLAINT_OPTIONS,
+    exercise_options: EXERCISE_OPTIONS,
+    sleep_options: SLEEP_OPTIONS,
+    stress_options: STRESS_OPTIONS,
+    referral_options: REFERRAL_OPTIONS,
+  });
+
+  useEffect(() => {
+    // Fetch custom question options
+    fetch('/api/questions')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !data.error) {
+          setQuestionOptions({
+            complaint_options: data.complaint_options || COMPLAINT_OPTIONS,
+            exercise_options: data.exercise_options || EXERCISE_OPTIONS,
+            sleep_options: data.sleep_options || SLEEP_OPTIONS,
+            stress_options: data.stress_options || STRESS_OPTIONS,
+            referral_options: data.referral_options || REFERRAL_OPTIONS,
+          });
+        }
+      })
+      .catch(() => {
+        // Use defaults on error
+      });
+  }, []);
 
   useEffect(() => {
     fetch(`/api/submissions/${token}`)
@@ -325,7 +362,7 @@ export default function MonshinPage() {
             <p className="text-sm text-gray-500">当てはまるものをすべて選択してください</p>
 
             <div className="grid grid-cols-2 gap-3">
-              {COMPLAINT_OPTIONS.map((c) => (
+              {questionOptions.complaint_options.map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -408,7 +445,7 @@ export default function MonshinPage() {
                 className={inputClass}
                 rows={3}
                 placeholder="例：お風呂に入ると、ストレッチすると"
-                value={form.pain_aggravators || ''}
+                value={form.pain_relievers || ''}
                 onChange={(e) => updateField('pain_relievers', e.target.value)}
               />
             </div>
@@ -478,7 +515,7 @@ export default function MonshinPage() {
             <div>
               <label className={labelClass}>運動頻度</label>
               <div className="space-y-2">
-                {EXERCISE_OPTIONS.map((opt) => (
+                {questionOptions.exercise_options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
@@ -503,7 +540,7 @@ export default function MonshinPage() {
             <div>
               <label className={labelClass}>睡眠の状態</label>
               <div className="space-y-2">
-                {SLEEP_OPTIONS.map((opt) => (
+                {questionOptions.sleep_options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
@@ -528,7 +565,7 @@ export default function MonshinPage() {
             <div>
               <label className={labelClass}>ストレスの程度</label>
               <div className="space-y-2">
-                {STRESS_OPTIONS.map((opt) => (
+                {questionOptions.stress_options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
@@ -562,7 +599,7 @@ export default function MonshinPage() {
             <div>
               <label className={labelClass}>当院を知ったきっかけ</label>
               <div className="space-y-2">
-                {REFERRAL_OPTIONS.map((opt) => (
+                {questionOptions.referral_options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
