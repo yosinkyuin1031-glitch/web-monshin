@@ -85,64 +85,41 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // 提出時にcm_patientsと自動リンク
+  // 提出時にcm_patientsと自動リンク（共通基盤のfind_or_create_patient使用）
   if (data && updates.status === 'submitted' && data.patient_name) {
-    // tokenから取得したsubmissionのclinic_idを使用（患者は未認証のため）
     const clinicId = data.clinic_id;
 
-    // 全患者を取得してファジーマッチング（電話番号・生年月日も取得してマッチング精度向上）
-    const { data: allPatients } = await supabase
-      .from('cm_patients')
-      .select('id, name, furigana, phone, birth_date')
-      .eq('clinic_id', clinicId);
+    try {
+      const result = await findOrCreatePatient(supabase, clinicId, {
+        name: data.patient_name || '',
+        furigana: data.patient_furigana || '',
+        phone: data.phone || '',
+        birth_date: data.birth_date || null,
+        gender: data.gender || '男性',
+        email: data.email || '',
+        zipcode: data.zipcode || '',
+        prefecture: data.prefecture || '',
+        city: data.city || '',
+        address: [data.prefecture, data.city, data.address, data.building].filter(Boolean).join(''),
+        building: data.building || '',
+        chief_complaint: (data.chief_complaints || []).join(', '),
+        medical_history: data.medical_history || '',
+        occupation: data.occupation || '',
+        referral_source: data.referral_source || '',
+      });
 
-    let patientId: string | null = null;
-    const matched = allPatients ? findBestMatch(data.patient_name, allPatients, {
-      phone: data.phone,
-      birth_date: data.birth_date,
-    }) : null;
-
-    if (matched) {
-      // ファジーマッチで既存患者にリンク
-      patientId = matched.id;
-    } else {
-      // 新規患者を自動作成
-      const { data: newPatient } = await supabase
-        .from('cm_patients')
-        .insert({
-          clinic_id: clinicId,
-          name: data.patient_name || '',
-          furigana: data.patient_furigana || '',
-          birth_date: data.birth_date || null,
-          gender: data.gender || '男性',
-          phone: data.phone || '',
-          email: data.email || '',
-          address: [data.prefecture, data.city, data.address, data.building].filter(Boolean).join(''),
-          zipcode: data.zipcode || '',
-          prefecture: data.prefecture || '',
-          city: data.city || '',
-          building: data.building || '',
-          chief_complaint: (data.chief_complaints || []).join(', '),
-          medical_history: data.medical_history || '',
-          occupation: data.occupation || '',
-          referral_source: data.referral_source || '',
-          notes: '',
-          status: 'active',
-        })
-        .select('id')
-        .single();
-
-      if (newPatient) {
-        patientId = newPatient.id;
+      if (result.patient_id) {
+        await supabase
+          .from('ms_submissions')
+          .update({
+            patient_id: result.patient_id,
+            patient_match_type: result.match_type,
+            patient_is_new: result.is_new,
+          })
+          .eq('id', data.id);
       }
-    }
-
-    // ms_submissionsにpatient_idをリンク
-    if (patientId) {
-      await supabase
-        .from('ms_submissions')
-        .update({ patient_id: patientId })
-        .eq('id', data.id);
+    } catch {
+      // 患者リンク失敗は問診提出をブロックしない
     }
 
     // LINE通知（スタッフへ）
