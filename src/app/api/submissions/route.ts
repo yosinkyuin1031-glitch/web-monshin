@@ -6,11 +6,17 @@ import { getClinicIdServer } from '@/lib/clinic-server';
 import { findOrCreatePatient } from '@/lib/shared-patient';
 import crypto from 'crypto';
 
-// GET: list all submissions (for staff dashboard)
+// GET: list all submissions (for staff dashboard) — 認証必須
 export async function GET(req: NextRequest) {
-  const status = req.nextUrl.searchParams.get('status');
-  const clinicId = await getClinicIdServer();
   const supabaseServer = await createClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const clinicId = await getClinicIdServer();
+  const status = req.nextUrl.searchParams.get('status');
 
   let query = supabaseServer
     .from('ms_submissions')
@@ -31,11 +37,17 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data);
 }
 
-// POST: create a new submission (generates token)
+// POST: create a new submission (generates token) — 認証必須（スタッフがQRコード等で発行）
 export async function POST() {
+  const supabaseServer = await createClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const token = crypto.randomBytes(16).toString('hex');
   const clinicId = await getClinicIdServer();
-  const supabaseServer = await createClient();
 
   const { data, error } = await supabaseServer
     .from('ms_submissions')
@@ -58,6 +70,21 @@ export async function PUT(req: NextRequest) {
 
   if (!token) {
     return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+  }
+
+  // tokenに対応するsubmissionの存在確認 & statusチェック（draft以外は変更不可）
+  const { data: existing } = await supabase
+    .from('ms_submissions')
+    .select('id, status')
+    .eq('token', token)
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
+  }
+
+  if (existing.status !== 'draft') {
+    return NextResponse.json({ error: 'This submission has already been submitted and cannot be modified' }, { status: 403 });
   }
 
   // If submitting, generate summary
