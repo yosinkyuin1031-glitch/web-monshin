@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ error: unknown }>;
@@ -11,6 +11,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +24,25 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     }
     setLoading(false);
   };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    setError('');
+
+    const { error: err } = await onLogin('demo@clinicapps.jp', 'demo1234');
+    if (err) {
+      setError('デモアカウントへのログインに失敗しました。しばらくしてからお試しください。');
+    }
+    setDemoLoading(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === 'true') {
+      handleDemoLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -78,6 +98,19 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           >
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
+
+          <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '24px', paddingTop: '24px', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>デモ体験はこちら</p>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={demoLoading}
+              className="w-full py-3 rounded-xl text-white font-semibold text-base disabled:opacity-50"
+              style={{ backgroundColor: '#0ea5e9' }}
+            >
+              {demoLoading ? 'デモログイン中...' : 'デモアカウントでログイン'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
