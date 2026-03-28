@@ -45,15 +45,26 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-sm w-full space-y-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="max-w-sm w-full space-y-4">
         <div
           className="rounded-2xl p-8 text-white text-center"
           style={{ backgroundColor: '#14252A' }}
         >
           <h1 className="text-xl font-bold">WEB問診 管理画面</h1>
-          <p className="text-sm opacity-80 mt-1">ログインしてください</p>
+          <p className="text-xs opacity-60 mt-1">by ClinicApps</p>
         </div>
+
+        {/* デモ体験ボタン（目立つ位置） */}
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={demoLoading}
+          className="w-full py-3.5 rounded-xl text-white font-bold text-base disabled:opacity-50 shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' }}
+        >
+          {demoLoading ? 'デモログイン中...' : '無料でデモ体験する'}
+        </button>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           {error && (
@@ -98,21 +109,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           >
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
-
-          <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '24px', paddingTop: '24px', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>デモ体験はこちら</p>
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={demoLoading}
-              className="w-full py-3 rounded-xl text-white font-semibold text-base disabled:opacity-50"
-              style={{ backgroundColor: '#0ea5e9' }}
-            >
-              {demoLoading ? 'デモログイン中...' : 'デモアカウントでログイン'}
-            </button>
-          </div>
         </form>
       </div>
+
+      <p className="text-gray-400 text-[10px] mt-6">&copy; ClinicApps</p>
     </div>
   );
 }
