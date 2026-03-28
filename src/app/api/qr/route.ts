@@ -5,9 +5,14 @@ import crypto from 'crypto';
 
 // POST: generate a new QR code link (creates a draft submission)
 export async function POST() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  }
+
   const token = crypto.randomBytes(16).toString('hex');
   const clinicId = await getClinicIdServer();
-  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('ms_submissions')

@@ -50,8 +50,13 @@ export async function GET() {
 
 // PUT: update custom question options
 export async function PUT(req: NextRequest) {
-  const clinicId = await getClinicIdServer();
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  }
+
+  const clinicId = await getClinicIdServer();
   const body = await req.json();
 
   const updates = {

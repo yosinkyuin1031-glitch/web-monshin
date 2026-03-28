@@ -8,8 +8,13 @@ import { Submission } from '@/lib/types';
  * 全問診データをCSV形式でダウンロード
  */
 export async function GET() {
-  const clinicId = await getClinicIdServer();
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  }
+
+  const clinicId = await getClinicIdServer();
 
   const { data, error } = await supabase
     .from('ms_submissions')
