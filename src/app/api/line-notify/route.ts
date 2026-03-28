@@ -9,7 +9,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
   }
 
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: '不正なリクエスト形式です' }, { status: 400 });
+  }
   const { patient_name, chief_complaints } = body;
 
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;

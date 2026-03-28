@@ -67,7 +67,12 @@ export async function POST() {
 // PUT: update a submission by token
 // NOTE: 患者が問診を入力する際はtokenベースで更新（認証不要）
 export async function PUT(req: NextRequest) {
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: '不正なリクエスト形式です' }, { status: 400 });
+  }
   const { token, ...updates } = body;
 
   if (!token) {
@@ -183,7 +188,8 @@ export async function PUT(req: NextRequest) {
           chief_complaints: data.chief_complaints,
         }),
       });
-    } catch {
+    } catch (err) {
+      console.error('LINE notify failed:', err instanceof Error ? err.message : err);
       // LINE通知失敗は問診提出をブロックしない
     }
   }

@@ -96,7 +96,7 @@ export default function MonshinPage() {
       });
   }, [token]);
 
-  const updateField = (field: string, value: unknown) => {
+  const updateField = (field: keyof Submission, value: Submission[keyof Submission]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 

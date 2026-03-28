@@ -5,9 +5,17 @@ export async function GET(req: NextRequest) {
   if (!zipcode) {
     return NextResponse.json({ error: 'code is required' }, { status: 400 });
   }
+  if (!/^\d{7}$/.test(zipcode)) {
+    return NextResponse.json({ error: 'Invalid zipcode format' }, { status: 400 });
+  }
 
   try {
-    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zipcode}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zipcode}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
     const data = await res.json();
 
     if (data.results && data.results.length > 0) {

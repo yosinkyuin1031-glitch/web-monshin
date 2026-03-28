@@ -68,7 +68,12 @@ export async function PATCH(
   }
 
   const clinicId = await getClinicIdServer();
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: '不正なリクエスト形式です' }, { status: 400 });
+  }
 
   // スタッフが更新可能なフィールドのみ許可
   const allowedPatchFields = ['status', 'notes', 'patient_id', 'patient_match_type'];

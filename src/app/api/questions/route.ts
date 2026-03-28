@@ -57,7 +57,12 @@ export async function PUT(req: NextRequest) {
   }
 
   const clinicId = await getClinicIdServer();
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: '不正なリクエスト形式です' }, { status: 400 });
+  }
 
   const updates = {
     clinic_id: clinicId,

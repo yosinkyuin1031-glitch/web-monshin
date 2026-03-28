@@ -54,7 +54,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
   }
 
-  const { submissionId, patientId } = await req.json();
+  let reqBody;
+  try {
+    reqBody = await req.json();
+  } catch {
+    return NextResponse.json({ error: '不正なリクエスト形式です' }, { status: 400 });
+  }
+  const { submissionId, patientId } = reqBody;
 
   if (!submissionId || !patientId) {
     return NextResponse.json({ error: 'submissionId and patientId are required' }, { status: 400 });
