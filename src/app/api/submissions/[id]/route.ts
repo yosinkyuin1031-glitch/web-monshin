@@ -70,9 +70,18 @@ export async function PATCH(
   const clinicId = await getClinicIdServer();
   const body = await req.json();
 
+  // スタッフが更新可能なフィールドのみ許可
+  const allowedPatchFields = ['status', 'notes', 'patient_id', 'patient_match_type'];
+  const sanitized: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  for (const key of Object.keys(body)) {
+    if (allowedPatchFields.includes(key)) {
+      sanitized[key] = body[key];
+    }
+  }
+
   const { data, error } = await supabaseServer
     .from('ms_submissions')
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update(sanitized)
     .eq('id', id)
     .eq('clinic_id', clinicId)
     .select()

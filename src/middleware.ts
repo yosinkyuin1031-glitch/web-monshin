@@ -45,5 +45,6 @@ export const config = {
     '/api/qr',
     '/api/questions',
     '/api/patient-link',
+    '/api/line-notify',
   ],
 };
