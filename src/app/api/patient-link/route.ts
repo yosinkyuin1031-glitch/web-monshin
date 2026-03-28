@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
     .eq('clinic_id', clinicId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Patient link error:', error.message);
+    return NextResponse.json({ error: '患者リンクの更新に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, patient_name: patient.name });

@@ -21,7 +21,8 @@ export async function POST() {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('QR generation error:', error.message);
+    return NextResponse.json({ error: 'QRコードの生成に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json({ token: data.token, id: data.id });

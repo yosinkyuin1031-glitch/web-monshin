@@ -77,7 +77,8 @@ export async function PUT(req: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Questions update error:', error.message);
+    return NextResponse.json({ error: '設問の更新に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json(data);

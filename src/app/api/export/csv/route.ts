@@ -24,7 +24,8 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('CSV export error:', error.message);
+    return NextResponse.json({ error: 'データの取得に失敗しました' }, { status: 500 });
   }
 
   const submissions = (data || []) as Submission[];

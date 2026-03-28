@@ -81,6 +81,7 @@ export default function MonshinPage() {
       .then((data) => {
         if (data.error) {
           showToast('問診票が見つかりませんでした', 'error');
+          setLoading(false);
           return;
         }
         if (data.status === 'submitted' || data.status === 'reviewed') {
@@ -91,6 +92,7 @@ export default function MonshinPage() {
       })
       .catch(() => {
         showToast('エラーが発生しました', 'error');
+        setLoading(false);
       });
   }, [token]);
 

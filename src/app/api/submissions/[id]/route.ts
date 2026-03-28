@@ -79,7 +79,8 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('submissions PATCH error:', error.message);
+    return NextResponse.json({ error: '処理に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json(data);

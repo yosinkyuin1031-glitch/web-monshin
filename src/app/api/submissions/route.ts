@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('submissions GET error:', error.message);
+    return NextResponse.json({ error: '処理に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json(data);
@@ -56,7 +57,8 @@ export async function POST() {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('submissions POST error:', error.message);
+    return NextResponse.json({ error: '処理に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json(data);
@@ -91,8 +93,24 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'This submission has already been submitted and cannot be modified' }, { status: 403 });
   }
 
+  // 許可フィールドのホワイトリスト（患者が更新可能なフィールドのみ）
+  const allowedFields = [
+    'patient_name', 'patient_furigana', 'birth_date', 'gender', 'phone', 'email',
+    'postal_code', 'prefecture', 'city', 'address', 'building',
+    'chief_complaints', 'onset_timing', 'pain_level', 'worsening_actions', 'relieving_actions',
+    'medical_history', 'medications', 'allergies', 'occupation',
+    'exercise_habits', 'sleep_quality', 'stress_level', 'referral_source',
+    'consent_agreed', 'status', 'summary_text', 'updated_at',
+  ];
+  const sanitizedUpdates: Record<string, unknown> = {};
+  for (const key of Object.keys(updates)) {
+    if (allowedFields.includes(key)) {
+      sanitizedUpdates[key] = updates[key];
+    }
+  }
+
   // If submitting, generate summary
-  if (updates.status === 'submitted') {
+  if (sanitizedUpdates.status === 'submitted') {
     // First fetch current data
     const { data: current } = await supabase
       .from('ms_submissions')
@@ -100,20 +118,21 @@ export async function PUT(req: NextRequest) {
       .eq('token', token)
       .single();
 
-    const merged = { ...current, ...updates };
-    updates.summary_text = generateSummary(merged);
-    updates.updated_at = new Date().toISOString();
+    const merged = { ...current, ...sanitizedUpdates };
+    sanitizedUpdates.summary_text = generateSummary(merged);
+    sanitizedUpdates.updated_at = new Date().toISOString();
   }
 
   const { data, error } = await supabase
     .from('ms_submissions')
-    .update(updates)
+    .update(sanitizedUpdates)
     .eq('token', token)
     .select()
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('submissions PUT error:', error.message);
+    return NextResponse.json({ error: '処理に失敗しました' }, { status: 500 });
   }
 
   // 提出時にcm_patientsと自動リンク（共通基盤のfind_or_create_patient使用）
