@@ -34,12 +34,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      return NextResponse.json({ error: err }, { status: 500 });
+      console.error('LINE API error:', await res.text());
+      return NextResponse.json({ error: 'LINE通知の送信に失敗しました' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('LINE notify error:', err);
+    return NextResponse.json({ error: 'LINE通知の送信に失敗しました' }, { status: 500 });
   }
 }

@@ -157,7 +157,7 @@ export default function MonshinPage() {
         }));
       }
     } catch {
-      // silently fail
+      showToast('住所の検索に失敗しました', 'error');
     }
   };
 

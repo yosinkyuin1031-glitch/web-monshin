@@ -20,11 +20,21 @@ export default function StaffDashboard() {
     if (!user) return;
     const fetchSubmissions = async () => {
       setLoading(true);
-      const url = filter === 'all' ? '/api/submissions' : `/api/submissions?status=${filter}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      setSubmissions(data);
-      setLoading(false);
+      try {
+        const url = filter === 'all' ? '/api/submissions' : `/api/submissions?status=${filter}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          showToast('問診データの取得に失敗しました', 'error');
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setSubmissions(data);
+      } catch {
+        showToast('問診データの取得に失敗しました', 'error');
+      } finally {
+        setLoading(false);
+      }
     };
     fetchSubmissions();
   }, [filter, user]);

@@ -21,32 +21,55 @@ export default function SubmissionDetail() {
   useEffect(() => {
     if (!user) return;
     fetch(`/api/submissions/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('fetch failed');
+        return r.json();
+      })
       .then((data) => {
         setSub(data);
         setNotes(data.notes || '');
+        setLoading(false);
+      })
+      .catch(() => {
+        showToast('問診データの取得に失敗しました', 'error');
         setLoading(false);
       });
   }, [id, user]);
 
   const markReviewed = async () => {
-    const res = await fetch(`/api/submissions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'reviewed', notes }),
-    });
-    const data = await res.json();
-    setSub(data);
-    showToast('確認済みにしました', 'success');
+    try {
+      const res = await fetch(`/api/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'reviewed', notes }),
+      });
+      if (!res.ok) {
+        showToast('確認済みへの変更に失敗しました', 'error');
+        return;
+      }
+      const data = await res.json();
+      setSub(data);
+      showToast('確認済みにしました', 'success');
+    } catch {
+      showToast('確認済みへの変更に失敗しました', 'error');
+    }
   };
 
   const saveNotes = async () => {
-    await fetch(`/api/submissions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes }),
-    });
-    showToast('メモを保存しました', 'success');
+    try {
+      const res = await fetch(`/api/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      if (!res.ok) {
+        showToast('メモの保存に失敗しました', 'error');
+        return;
+      }
+      showToast('メモを保存しました', 'success');
+    } catch {
+      showToast('メモの保存に失敗しました', 'error');
+    }
   };
 
   const copySummary = () => {

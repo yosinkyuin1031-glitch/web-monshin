@@ -72,15 +72,19 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Token is required' }, { status: 400 });
   }
 
-  // tokenに対応するsubmissionの存在確認 & statusチェック（draft以外は変更不可）
+  // tokenに対応するsubmissionの存在確認 & clinic_id検証 & statusチェック（draft以外は変更不可）
   const { data: existing } = await supabase
     .from('ms_submissions')
-    .select('id, status')
+    .select('id, status, clinic_id')
     .eq('token', token)
     .single();
 
   if (!existing) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
+  }
+
+  if (!existing.clinic_id) {
+    return NextResponse.json({ error: 'Invalid submission: missing clinic' }, { status: 400 });
   }
 
   if (existing.status !== 'draft') {

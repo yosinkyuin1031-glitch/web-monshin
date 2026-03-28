@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from '@/components/Toast';
 
 export default function LineMonshinPage() {
   const [creating, setCreating] = useState(false);
+  const { showToast } = useToast();
 
   const handleStart = async () => {
     setCreating(true);
@@ -14,6 +16,7 @@ export default function LineMonshinPage() {
         window.location.href = `/monshin/${data.token}`;
       }
     } catch {
+      showToast('問診票の作成に失敗しました', 'error');
       setCreating(false);
     }
   };

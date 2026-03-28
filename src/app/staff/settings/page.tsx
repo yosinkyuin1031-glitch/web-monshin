@@ -40,9 +40,16 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/questions')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('fetch failed');
+        return r.json();
+      })
       .then((data) => {
         setOptions(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        showToast('設問データの取得に失敗しました', 'error');
         setLoading(false);
       });
   }, [user]);
