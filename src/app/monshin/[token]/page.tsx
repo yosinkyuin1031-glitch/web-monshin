@@ -111,11 +111,16 @@ export default function MonshinPage() {
   };
 
   const saveProgress = useCallback(async () => {
-    await fetch('/api/submissions', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, ...form }),
-    });
+    try {
+      const res = await fetch('/api/submissions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, ...form }),
+      });
+      if (!res.ok) console.warn('Save progress failed');
+    } catch {
+      console.warn('Save progress error');
+    }
   }, [token, form]);
 
   const nextStep = async () => {
