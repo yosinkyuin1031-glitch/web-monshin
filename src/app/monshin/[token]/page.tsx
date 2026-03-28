@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import ProgressBar from '@/components/ProgressBar';
 import { useToast } from '@/components/Toast';
 import {
@@ -41,10 +42,13 @@ export default function MonshinPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState<Partial<Submission>>({
     chief_complaints: [],
     pain_severity: 5,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Dynamic question options (fetched from API, falls back to hardcoded defaults)
   const [questionOptions, setQuestionOptions] = useState<QuestionOptions>({
@@ -80,11 +84,12 @@ export default function MonshinPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.error) {
-          showToast('問診票が見つかりませんでした', 'error');
+          setNotFound(true);
           setLoading(false);
           return;
         }
         if (data.status === 'submitted' || data.status === 'reviewed') {
+          setAlreadySubmitted(true);
           setSubmitted(true);
         }
         setForm(data);
@@ -123,7 +128,33 @@ export default function MonshinPage() {
     }
   }, [token, form]);
 
+  const validateStep = (currentStep: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (currentStep === 1) {
+      if (!form.patient_name?.trim()) {
+        newErrors.patient_name = 'お名前を入力してください';
+      }
+      if (!form.patient_furigana?.trim()) {
+        newErrors.patient_furigana = 'フリガナを入力してください';
+      }
+      if (form.phone && !/^[0-9\-]{10,13}$/.test(form.phone.replace(/\s/g, ''))) {
+        newErrors.phone = '正しい電話番号を入力してください（例: 090-1234-5678）';
+      }
+      if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        newErrors.email = '正しいメールアドレスを入力してください';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const nextStep = async () => {
+    if (!validateStep(step)) {
+      showToast('必須項目を入力してください', 'error');
+      return;
+    }
     await saveProgress();
     setStep((s) => Math.min(s + 1, 8));
     window.scrollTo(0, 0);
@@ -150,8 +181,11 @@ export default function MonshinPage() {
     }
   };
 
+  const [zipcodeError, setZipcodeError] = useState<string | null>(null);
+
   const lookupZipcode = async () => {
     if (!form.zipcode || form.zipcode.length < 7) return;
+    setZipcodeError(null);
     try {
       const res = await fetch(`/api/zipcode?code=${form.zipcode.replace('-', '')}`);
       const data = await res.json();
@@ -162,9 +196,11 @@ export default function MonshinPage() {
           city: data.city,
           address: data.address,
         }));
+      } else {
+        setZipcodeError('住所が見つかりませんでした。手動で入力してください。');
       }
     } catch {
-      showToast('住所の検索に失敗しました', 'error');
+      setZipcodeError('住所が見つかりませんでした。手動で入力してください。');
     }
   };
 
@@ -176,18 +212,60 @@ export default function MonshinPage() {
     );
   }
 
+  if (notFound) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center space-y-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold" style={{ color: '#14252A' }}>
+            問診が見つかりません
+          </h1>
+          <p className="text-gray-600 text-sm">
+            この問診票は存在しないか、有効期限が切れています。
+          </p>
+          <Link
+            href="/start"
+            className="inline-block px-6 py-3 text-white rounded-xl font-medium"
+            style={{ backgroundColor: '#14252A' }}
+          >
+            新しい問診票を作成する
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="text-5xl mb-4">&#10003;</div>
-          <h1 className="text-xl font-bold mb-2" style={{ color: '#14252A' }}>
-            問診票を送信しました
-          </h1>
-          <p className="text-gray-600">
-            ご記入ありがとうございます。<br />
-            ご来院をお待ちしております。
-          </p>
+          {alreadySubmitted ? (
+            <>
+              <div className="text-5xl mb-4" style={{ color: '#14252A' }}>&#9888;</div>
+              <h1 className="text-xl font-bold mb-2" style={{ color: '#14252A' }}>
+                この問診票は既に提出済みです
+              </h1>
+              <p className="text-gray-600">
+                この問診票は既に送信されています。<br />
+                ご不明な点がございましたら、受付までお声がけください。
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-5xl mb-4">&#10003;</div>
+              <h1 className="text-xl font-bold mb-2" style={{ color: '#14252A' }}>
+                問診票を送信しました
+              </h1>
+              <p className="text-gray-600">
+                ご記入ありがとうございます。<br />
+                ご来院をお待ちしております。
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -212,26 +290,42 @@ export default function MonshinPage() {
             <h2 className="text-lg font-bold" style={{ color: '#14252A' }}>基本情報</h2>
 
             <div>
-              <label className={labelClass}>お名前 <span className="text-red-500">*</span></label>
+              <label className={labelClass}>
+                お名前 <span className="text-red-500 text-xs font-bold ml-1">必須</span>
+              </label>
               <input
                 type="text"
-                className={inputClass}
+                className={`${inputClass} ${errors.patient_name ? 'border-red-400 ring-1 ring-red-400' : ''}`}
                 placeholder="山田 太郎"
                 value={form.patient_name || ''}
-                onChange={(e) => updateField('patient_name', e.target.value)}
+                onChange={(e) => {
+                  updateField('patient_name', e.target.value);
+                  if (errors.patient_name) setErrors((prev) => { const n = {...prev}; delete n.patient_name; return n; });
+                }}
                 style={{ focusRingColor: '#14252A' } as React.CSSProperties}
               />
+              {errors.patient_name && (
+                <p className="text-red-500 text-xs mt-1">{errors.patient_name}</p>
+              )}
             </div>
 
             <div>
-              <label className={labelClass}>フリガナ <span className="text-red-500">*</span></label>
+              <label className={labelClass}>
+                フリガナ <span className="text-red-500 text-xs font-bold ml-1">必須</span>
+              </label>
               <input
                 type="text"
-                className={inputClass}
+                className={`${inputClass} ${errors.patient_furigana ? 'border-red-400 ring-1 ring-red-400' : ''}`}
                 placeholder="ヤマダ タロウ"
                 value={form.patient_furigana || ''}
-                onChange={(e) => updateField('patient_furigana', e.target.value)}
+                onChange={(e) => {
+                  updateField('patient_furigana', e.target.value);
+                  if (errors.patient_furigana) setErrors((prev) => { const n = {...prev}; delete n.patient_furigana; return n; });
+                }}
               />
+              {errors.patient_furigana && (
+                <p className="text-red-500 text-xs mt-1">{errors.patient_furigana}</p>
+              )}
             </div>
 
             <div>
@@ -269,22 +363,34 @@ export default function MonshinPage() {
               <label className={labelClass}>電話番号</label>
               <input
                 type="tel"
-                className={inputClass}
+                className={`${inputClass} ${errors.phone ? 'border-red-400 ring-1 ring-red-400' : ''}`}
                 placeholder="090-1234-5678"
                 value={form.phone || ''}
-                onChange={(e) => updateField('phone', e.target.value)}
+                onChange={(e) => {
+                  updateField('phone', e.target.value);
+                  if (errors.phone) setErrors((prev) => { const n = {...prev}; delete n.phone; return n; });
+                }}
               />
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              )}
             </div>
 
             <div>
               <label className={labelClass}>メールアドレス</label>
               <input
                 type="email"
-                className={inputClass}
+                className={`${inputClass} ${errors.email ? 'border-red-400 ring-1 ring-red-400' : ''}`}
                 placeholder="example@mail.com"
                 value={form.email || ''}
-                onChange={(e) => updateField('email', e.target.value)}
+                onChange={(e) => {
+                  updateField('email', e.target.value);
+                  if (errors.email) setErrors((prev) => { const n = {...prev}; delete n.email; return n; });
+                }}
               />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
           </div>
         )}
@@ -302,7 +408,10 @@ export default function MonshinPage() {
                   className={inputClass}
                   placeholder="1234567"
                   value={form.zipcode || ''}
-                  onChange={(e) => updateField('zipcode', e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => {
+                    updateField('zipcode', e.target.value.replace(/[^0-9]/g, ''));
+                    setZipcodeError(null);
+                  }}
                   maxLength={7}
                 />
                 <button
@@ -314,6 +423,11 @@ export default function MonshinPage() {
                   住所検索
                 </button>
               </div>
+              {zipcodeError && (
+                <p className="text-orange-600 text-sm mt-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                  {zipcodeError}
+                </p>
+              )}
             </div>
 
             <div>
@@ -754,14 +868,21 @@ export default function MonshinPage() {
 
         {/* Navigation */}
         <div className="flex gap-3 mt-8 pb-8">
-          {step > 1 && (
+          {step > 1 ? (
             <button
               type="button"
               onClick={prevStep}
               className="flex-1 py-4 rounded-xl border border-gray-300 text-gray-700 font-medium text-base"
             >
-              戻る
+              前のページに戻る
             </button>
+          ) : (
+            <Link
+              href="/start"
+              className="flex-1 py-4 rounded-xl border border-gray-300 text-gray-700 font-medium text-base text-center"
+            >
+              前のページに戻る
+            </Link>
           )}
           {step < 8 ? (
             <button

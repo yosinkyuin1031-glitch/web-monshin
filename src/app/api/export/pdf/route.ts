@@ -87,9 +87,11 @@ export async function GET(req: NextRequest) {
     .complaints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
     .complaint-tag { background: #14252A; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; }
     .summary-box { background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; padding: 12px; white-space: pre-wrap; font-size: 11px; line-height: 1.6; }
+    .no-print { margin-top: 24px; }
     @media print {
       body { padding: 10mm; }
       @page { margin: 10mm; size: A4; }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
@@ -160,7 +162,10 @@ export async function GET(req: NextRequest) {
   </div>
   ` : ''}
 
-  <script>window.onload = function() { window.print(); }</script>
+  <div class="print-actions no-print" style="text-align:center;margin-top:24px;">
+    <button onclick="window.print()" style="padding:12px 32px;font-size:15px;font-weight:bold;color:#fff;background:#14252A;border:none;border-radius:8px;cursor:pointer;">印刷する</button>
+    <button onclick="window.close()" style="padding:12px 32px;font-size:15px;font-weight:bold;color:#14252A;background:#fff;border:2px solid #14252A;border-radius:8px;cursor:pointer;margin-left:12px;">閉じる</button>
+  </div>
 </body>
 </html>`;
 

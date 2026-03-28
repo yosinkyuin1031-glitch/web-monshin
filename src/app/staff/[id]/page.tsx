@@ -18,6 +18,21 @@ export default function SubmissionDetail() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
 
+  // Patient link state
+  interface PatientCandidate {
+    id: string;
+    name: string;
+    furigana?: string;
+    phone?: string;
+    patient_number?: number;
+    confidence: number;
+  }
+  const [patientSearch, setPatientSearch] = useState('');
+  const [patientCandidates, setPatientCandidates] = useState<PatientCandidate[]>([]);
+  const [searchingPatients, setSearchingPatients] = useState(false);
+  const [linkingPatient, setLinkingPatient] = useState(false);
+  const [showPatientLink, setShowPatientLink] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     fetch(`/api/submissions/${id}`)
@@ -81,6 +96,51 @@ export default function SubmissionDetail() {
 
   const handlePdfExport = () => {
     window.open(`/api/export/pdf?id=${id}`, '_blank');
+  };
+
+  const searchPatients = async () => {
+    setSearchingPatients(true);
+    try {
+      const res = await fetch(`/api/patient-link?submissionId=${id}`);
+      if (!res.ok) {
+        showToast('患者候補の検索に失敗しました', 'error');
+        return;
+      }
+      const data = await res.json();
+      setPatientCandidates(data.candidates || []);
+    } catch {
+      showToast('患者候補の検索に失敗しました', 'error');
+    } finally {
+      setSearchingPatients(false);
+    }
+  };
+
+  const linkPatient = async (patientId: string) => {
+    setLinkingPatient(true);
+    try {
+      const res = await fetch('/api/patient-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId: id, patientId }),
+      });
+      if (!res.ok) {
+        showToast('患者リンクに失敗しました', 'error');
+        return;
+      }
+      const data = await res.json();
+      showToast(`${data.patient_name}にリンクしました`, 'success');
+      setShowPatientLink(false);
+      // Reload submission to reflect the link
+      const subRes = await fetch(`/api/submissions/${id}`);
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSub(subData);
+      }
+    } catch {
+      showToast('患者リンクに失敗しました', 'error');
+    } finally {
+      setLinkingPatient(false);
+    }
   };
 
   // Show spinner while checking auth
@@ -177,6 +237,22 @@ export default function SubmissionDetail() {
           >
             PDF出力
           </button>
+          {!sub.patient_id && (
+            <button
+              onClick={() => {
+                setShowPatientLink(true);
+                searchPatients();
+              }}
+              className="px-5 py-2 border rounded-lg text-sm font-medium bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+            >
+              患者リンク
+            </button>
+          )}
+          {sub.patient_id && (
+            <span className="px-5 py-2 bg-green-50 border border-green-200 rounded-lg text-sm font-medium text-green-700">
+              患者リンク済み
+            </span>
+          )}
         </div>
 
         <Section title="基本情報">
@@ -251,6 +327,95 @@ export default function SubmissionDetail() {
             <pre className="bg-gray-50 rounded-lg p-4 text-sm whitespace-pre-wrap font-sans">
               {sub.summary_text}
             </pre>
+          </div>
+        )}
+
+        {/* Patient Link Panel */}
+        {showPatientLink && (
+          <div className="bg-white rounded-xl border border-blue-200 p-5 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-sm" style={{ color: '#14252A' }}>
+                患者を検索してリンク
+              </h3>
+              <button
+                onClick={() => setShowPatientLink(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                placeholder="患者名で絞り込み..."
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+              />
+              <button
+                onClick={searchPatients}
+                disabled={searchingPatients}
+                className="px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                style={{ backgroundColor: '#14252A' }}
+              >
+                {searchingPatients ? '検索中...' : '再検索'}
+              </button>
+            </div>
+
+            {searchingPatients ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: '#14252A' }} />
+              </div>
+            ) : patientCandidates.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                候補となる患者が見つかりません
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  候補一覧（一致度順）
+                </p>
+                {patientCandidates
+                  .filter((c) => !patientSearch || c.name?.includes(patientSearch) || c.furigana?.includes(patientSearch))
+                  .map((candidate) => (
+                    <div
+                      key={candidate.id}
+                      className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 border border-gray-200"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{candidate.name}</span>
+                          {candidate.patient_number && (
+                            <span className="text-xs text-gray-400 font-mono">
+                              P{String(candidate.patient_number).padStart(4, '0')}
+                            </span>
+                          )}
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            candidate.confidence >= 80 ? 'bg-green-100 text-green-700' :
+                            candidate.confidence >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            一致度 {candidate.confidence}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {candidate.furigana && <span>{candidate.furigana}</span>}
+                          {candidate.phone && <span className="ml-2">{candidate.phone}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => linkPatient(candidate.id)}
+                        disabled={linkingPatient}
+                        className="px-3 py-1.5 text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                        style={{ backgroundColor: '#14252A' }}
+                      >
+                        この患者にリンク
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
 
