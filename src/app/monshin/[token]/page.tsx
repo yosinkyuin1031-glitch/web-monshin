@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import ProgressBar from '@/components/ProgressBar';
+import { useToast } from '@/components/Toast';
 import {
   Submission,
   COMPLAINT_OPTIONS,
@@ -34,6 +35,7 @@ interface QuestionOptions {
 export default function MonshinPage() {
   const params = useParams();
   const token = params.token as string;
+  const { showToast } = useToast();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ export default function MonshinPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.error) {
-          alert('問診票が見つかりませんでした');
+          showToast('問診票が見つかりませんでした', 'error');
           return;
         }
         if (data.status === 'submitted' || data.status === 'reviewed') {
@@ -88,7 +90,7 @@ export default function MonshinPage() {
         setLoading(false);
       })
       .catch(() => {
-        alert('エラーが発生しました');
+        showToast('エラーが発生しました', 'error');
       });
   }, [token]);
 
@@ -135,7 +137,7 @@ export default function MonshinPage() {
       });
       setSubmitted(true);
     } catch {
-      alert('送信に失敗しました。もう一度お試しください。');
+      showToast('送信に失敗しました。もう一度お試しください。', 'error');
     } finally {
       setSubmitting(false);
     }

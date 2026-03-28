@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { Submission } from '@/lib/types';
 import { useAuth } from '@/lib/useAuth';
 import LoginForm from '@/components/LoginForm';
+import { useToast } from '@/components/Toast';
 
 export default function SubmissionDetail() {
   const { user, loading: authLoading, signIn } = useAuth();
+  const { showToast } = useToast();
   const params = useParams();
   const id = params.id as string;
 
@@ -35,7 +37,7 @@ export default function SubmissionDetail() {
     });
     const data = await res.json();
     setSub(data);
-    alert('確認済みにしました');
+    showToast('確認済みにしました', 'success');
   };
 
   const saveNotes = async () => {
@@ -44,13 +46,13 @@ export default function SubmissionDetail() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes }),
     });
-    alert('メモを保存しました');
+    showToast('メモを保存しました', 'success');
   };
 
   const copySummary = () => {
     if (sub?.summary_text) {
       navigator.clipboard.writeText(sub.summary_text);
-      alert('カルテ用テキストをコピーしました');
+      showToast('カルテ用テキストをコピーしました', 'success');
     }
   };
 

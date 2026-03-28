@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { Submission } from '@/lib/types';
 import { useAuth } from '@/lib/useAuth';
 import LoginForm from '@/components/LoginForm';
+import { useToast } from '@/components/Toast';
 
 export default function StaffDashboard() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const { showToast } = useToast();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function StaffDashboard() {
       const baseUrl = window.location.origin;
       setQrUrl(`${baseUrl}/monshin/${data.token}`);
     } catch {
-      alert('QRコードの生成に失敗しました');
+      showToast('QRコードの生成に失敗しました', 'error');
     } finally {
       setGenerating(false);
     }
@@ -171,7 +173,7 @@ export default function StaffDashboard() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(qrUrl);
-                    alert('URLをコピーしました');
+                    showToast('URLをコピーしました', 'success');
                   }}
                   className="px-4 py-2 text-white rounded-lg text-sm"
                   style={{ backgroundColor: '#14252A' }}

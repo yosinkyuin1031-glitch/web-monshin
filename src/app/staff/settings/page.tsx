@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/useAuth';
 import LoginForm from '@/components/LoginForm';
+import { useToast } from '@/components/Toast';
 
 interface QuestionOptions {
   complaint_options: string[];
@@ -24,6 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function SettingsPage() {
   const { user, loading: authLoading, signIn } = useAuth();
+  const { showToast } = useToast();
   const [options, setOptions] = useState<QuestionOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,12 +82,12 @@ export default function SettingsPage() {
         body: JSON.stringify(options),
       });
       if (res.ok) {
-        alert('設定を保存しました');
+        showToast('設定を保存しました', 'success');
       } else {
-        alert('保存に失敗しました');
+        showToast('保存に失敗しました', 'error');
       }
     } catch {
-      alert('保存に失敗しました');
+      showToast('保存に失敗しました', 'error');
     } finally {
       setSaving(false);
     }
