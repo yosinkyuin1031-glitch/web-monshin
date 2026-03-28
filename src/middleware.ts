@@ -44,5 +44,6 @@ export const config = {
     '/api/export/:path*',
     '/api/qr',
     '/api/questions',
+    '/api/patient-link',
   ],
 };

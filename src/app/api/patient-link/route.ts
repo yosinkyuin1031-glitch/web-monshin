@@ -3,15 +3,21 @@ import { createClient } from '@/lib/supabase/server';
 import { getClinicIdServer } from '@/lib/clinic-server';
 import { searchPatientCandidates } from '@/lib/shared-patient';
 
-// GET: 未リンク問診の患者候補を検索
+// GET: 未リンク問診の患者候補を検索 — スタッフ向け（認証必須）
 export async function GET(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  }
+
   const submissionId = req.nextUrl.searchParams.get('submissionId');
   if (!submissionId) {
     return NextResponse.json({ error: 'submissionId is required' }, { status: 400 });
   }
 
   const clinicId = await getClinicIdServer();
-  const supabase = await createClient();
 
   // 問診データを取得
   const { data: submission } = await supabase
@@ -39,8 +45,15 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST: 問診を手動で患者にリンク
+// POST: 問診を手動で患者にリンク — スタッフ向け（認証必須）
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  }
+
   const { submissionId, patientId } = await req.json();
 
   if (!submissionId || !patientId) {
@@ -48,7 +61,6 @@ export async function POST(req: NextRequest) {
   }
 
   const clinicId = await getClinicIdServer();
-  const supabase = await createClient();
 
   // 患者がこのクリニックに属するか確認
   const { data: patient } = await supabase

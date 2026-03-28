@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabaseServer.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
   }
 
   const clinicId = await getClinicIdServer();
@@ -43,7 +43,7 @@ export async function POST() {
   const { data: { user } } = await supabaseServer.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
   }
 
   const token = crypto.randomBytes(16).toString('hex');
