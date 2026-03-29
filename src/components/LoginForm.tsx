@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ error: unknown }>;
@@ -11,7 +11,6 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,25 +24,6 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setLoading(false);
   };
 
-  const handleDemoLogin = async () => {
-    setDemoLoading(true);
-    setError('');
-
-    const { error: err } = await onLogin('demo@clinicapps.jp', 'demo1234');
-    if (err) {
-      setError('デモアカウントへのログインに失敗しました。しばらくしてからお試しください。');
-    }
-    setDemoLoading(false);
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('demo') === 'true') {
-      handleDemoLogin();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-sm w-full space-y-4">
@@ -54,17 +34,6 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <h1 className="text-xl font-bold">WEB問診 管理画面</h1>
           <p className="text-xs opacity-60 mt-1">by ClinicApps</p>
         </div>
-
-        {/* デモ体験ボタン（目立つ位置） */}
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={demoLoading}
-          className="w-full py-3.5 rounded-xl text-white font-bold text-base disabled:opacity-50 shadow-lg"
-          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' }}
-        >
-          {demoLoading ? 'デモログイン中...' : '無料でデモ体験する'}
-        </button>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           {error && (
